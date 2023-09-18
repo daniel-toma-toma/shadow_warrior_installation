@@ -1,16 +1,18 @@
+
 from bluepy.btle import UUID, Peripheral
 import numpy as np
-#import pyttsx3
+import pyttsx3
 import os
 import threading
 import logging
 import time
 import board
 import neopixel
-#import pygame
 
 
 logging.basicConfig(format="%(asctime)s: %(message)s", level=logging.DEBUG)
+
+
 
 # simulated leds
 """
@@ -22,15 +24,16 @@ color_txt = text+colors
 color_txt[::2] = colors
 color_txt[1::2] = text"""
 
-#import vlc
-#song = vlc.MediaPlayer("./kavinsky.mp3")
-#song.set_time(20000)
-#song.play()
+import vlc
+song = vlc.MediaPlayer("./kavinsky.mp3")
+song.set_time(20000)
+song.play()
 
 
 #os.system("bluetoothctl connect 41:42:19:BD:A0:F6")
 
 num_devices = 1
+
 dev1 = "58:37:C7:68:4A:32"
 dev2 = "C3:96:F9:08:7E:EC"
 button_service_uuid = UUID(0x1100)
@@ -40,7 +43,7 @@ v_threshold = 50
 v_cnt_threshold = 20 # TODO revert to 5
 a_cnt_threshold = 40 # punches count
 game_state = "shout"
-#engine = pyttsx3.init()
+engine = pyttsx3.init()
 p1 = None
 
 
@@ -53,7 +56,7 @@ p1 = None
 
 
 LED_COUNT = 5*60-1
-pixels1 = neopixel.NeoPixel(board.D18, LED_COUNT, brightness=0.1, auto_write=False)
+
 
 start_time = time.time()
 audio_level = 0
@@ -66,19 +69,23 @@ MINIMUM_AUDIO_LEVEL_THRESHOULD = 20
 
 
 def start_music():
-    pygame.mixer.music.play()
+    #pygame.mixer.music.play()
+    pass
 
 def stop_music():
-    pygame.mixer.music.stop()
+    #pygame.mixer.music.stop()
+    pass
 
 
 def led_thread():
-    global game_state, audio_level, acceleration
+    global game_state, audio_level, pixels1acceleration
     try:
         prev_state = game_state
         logging.info("led thread started")
+        pixels1 = neopixel.NeoPixel(board.D21, LED_COUNT, brightness=0.1, auto_write=False)
         while True:
             try:
+                #continue
                 # clip function 
                 new_audio_level = audio_level
                 new_audio_level = min(audio_level, MAX_AUDIO_LEVEL)
@@ -111,6 +118,7 @@ def logic_thread():
     try:
         while True:
             try:
+                #time.sleep(1)
                 logging.info("about to get Peripheral")
                 p1 = Peripheral(dev1, "public")
                 logging.info("got Peripheral")
@@ -118,11 +126,15 @@ def logic_thread():
             except:
                 logging.exception("Failed connecting. Trying again")
                 time.sleep(3)
-            
+        logging.info("about to get Service1")
+        #time.sleep(1)
         Service1=p1.getServiceByUUID(button_service_uuid)
         logging.info("got Service1")
         #p2 = Peripheral(dev2, "public")
         #Service2=p2.getServiceByUUID(button_service_uuid)
+        
+        logging.info("about to get charactistics")
+        #time.sleep(1)
         
         ch1 = Service1.getCharacteristics(button_char_uuid)[0]
         logging.info("getCharacteristics")
@@ -155,16 +167,16 @@ def logic_thread():
                 if game_state == "punch" and time.time() > end_time:
                     logging.info("User lost due to timeout")
                     stop_music()
-                    #engine.say("you lose")
+                    engine.say("you lose")
                     #TODO loose animation
                     
-                    #engine.runAndWait()
+                    engine.runAndWait()
                     game_state = "shout"
                 # v1 is volume user is showint
                 if game_state == "shout" and v1 > v_threshold:
                     logging.info(f"User is shouting at level: {audio_level}")
-                    #engine.say("shout")
-                    #engine.runAndWait()
+                    engine.say("shout")
+                    engine.runAndWait()
                     #print("shout!")
                     v_cnt = v_cnt + 1
                     #print(v_cnt)
@@ -173,8 +185,8 @@ def logic_thread():
                         logging.info("User shouted enough")
                         game_state = "punch"
                         logging.info("level 2")
-                        #engine.say("level 2")
-                        #engine.runAndWait()
+                        engine.say("level 2")
+                        engine.runAndWait()
                         start_music()
                         a_cnt = 0
                         start_time = time.time() 
@@ -184,8 +196,8 @@ def logic_thread():
                 # if punch is strong enough
                 if a1 > a_threshold:
                     logging.info("Punch")
-                    #engine.say("punch")
-                    #engine.runAndWait()
+                    engine.say("punch")
+                    engine.runAndWait()
                     a_cnt = a_cnt + 1
 
                     # if you have enought punches - finish game with a win
@@ -195,8 +207,8 @@ def logic_thread():
                         
                         stop_music()
                         #print("you win")
-                        #engine.say("you win")
-                        #engine.runAndWait()
+                        engine.say("you win")
+                        engine.runAndWait()
                         game_state = "shout"
                         v_cnt = 0
                         a_cnt = 0
@@ -226,10 +238,7 @@ def try_disconnect():
 
 def main():
     logging.exception("Starting punching bag")
-    #pygame.mixer.init()
-    #pygame.mixer.music.load("kavinsky.mp3")
-    
-    
+        
     led_thread_handler = threading.Thread(target=led_thread)
     logic_thread_handler = threading.Thread(target=logic_thread)
     
